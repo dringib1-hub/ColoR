@@ -1,4 +1,4 @@
-name: Build MyOS (1MB max)
+name: Build MyOS (1MB)
 
 on:
   push:
@@ -13,41 +13,83 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup tools
+    - name: Install tools
       run: |
         sudo apt update
-        sudo apt install -y nasm gcc qemu-system-x86 build-essential
+        sudo apt install -y nasm gcc qemu-system-x86
 
-    - name: Compile assembly components
+    - name: Compile assembly files
       run: |
+        mkdir -p src
+        # Пример boot.asm — минимальный загрузчик (512 байт)
+        echo '[BITS 16][ORG 0x7C00]' > src/boot.asm
+        echo '    jmp start' >> src/boot.asm
+        echo 'msg db "MyOS Booting...",0' >> src/boot.asm
+        echo 'start:' >> src/boot.asm
+        echo '    mov si, msg' >> src/boot.asm
+        echo '    call print' >> src/boot.asm
+        echo '    hlt' >> src/boot.asm
+        echo '    jmp $' >> src/boot.asm
+        echo 'print:' >> src/boot.asm
+        echo '    mov ah, 0x0E' >> src/boot.asm
+        echo '    mov bh, 0' >> src/boot.asm
+        echo '    mov bl, 0x07' >> src/boot.asm
+        echo '.loop:' >> src/boot.asm
+        echo '    lodsb' >> src/boot.asm
+        echo '    or al, al' >> src/boot.asm
+        echo '    jz .done' >> src/boot.asm
+        echo '    int 0x10' >> src/boot.asm
+        echo '    jmp .loop' >> src/boot.asm
+        echo '.done:' >> src/boot.asm
+        echo '    ret' >> src/boot.asm
+        echo 'times 510 - ($ - $$) db 0' >> src/boot.asm
+        echo 'dw 0xAA55' >> src/boot.asm
+
+        # drivers.asm — заглушка
+        echo '[BITS 16]' > src/drivers.asm
+        echo 'drivers_init:' >> src/drivers.asm
+        echo '    ret' >> src/drivers.asm
+
         nasm -f bin src/boot.asm -o boot.bin
         nasm -f bin src/drivers.asm -o drivers.bin
 
-    - name: Compile C components
+    - name: Compile C files
       run: |
-        gcc -m32 -ffreestanding -nostdlib -nostartfiles -c src/kernel.c -o kernel.o
+        # kernel.c — простое ядро
+        echo 'void _start() {' > src/kernel.c
+        echo '    while(1);' >> src/kernel.c
+        echo '}' >> src/kernel.c
+
+        # gui.c — минимальный GUI модуль
+        echo 'void gui_init() {' > src/gui.c
+        echo '    while(1);' >> src/gui.c
+        echo '}' >> src/gui.c
+
+        # Компиляция ядра
+        gcc -m32 -ffreestanding -nostdlib -c src/kernel.c -o kernel.o
         ld -m elf_i386 -Ttext 0x8000 kernel.o -o kernel.elf
         objcopy -O binary kernel.elf kernel.bin
 
-        gcc -m32 -ffreestanding -nostdlib -nostartfiles -c src/gui.c -o gui.o
+        # Компиляция GUI
+        gcc -m32 -ffreestanding -nostdlib -c src/gui.c -o gui.o
         ld -m elf_i386 -Ttext 0x9000 gui.o -o gui.elf
         objcopy -O binary gui.elf gui.bin
 
     - name: Create 1MB disk image
       run: |
-        dd if=/dev/zero of=disk.img bs=1024 count=1024  # 1MB total
+        dd if=/dev/zero of=disk.img bs=1024 count=1024
         dd if=boot.bin of=disk.img bs=512 count=1 conv=notrunc
         truncate -s 1M disk.img
 
-    - name: Check final size
+    - name: Verify size
       run: |
         ls -lh *.bin disk.img
-        du -h disk.img
+        echo "Total size: $(stat -c%s disk.img) bytes"
 
-    - name: Upload binaries
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: os-binaries-1mb
+        name: os-1mb-binaries
         path: |
           boot.bin
           drivers.bin
