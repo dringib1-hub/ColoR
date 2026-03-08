@@ -1,0 +1,56 @@
+name: Build MyOS (1MB max)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup tools
+      run: |
+        sudo apt update
+        sudo apt install -y nasm gcc qemu-system-x86 build-essential
+
+    - name: Compile assembly components
+      run: |
+        nasm -f bin src/boot.asm -o boot.bin
+        nasm -f bin src/drivers.asm -o drivers.bin
+
+    - name: Compile C components
+      run: |
+        gcc -m32 -ffreestanding -nostdlib -nostartfiles -c src/kernel.c -o kernel.o
+        ld -m elf_i386 -Ttext 0x8000 kernel.o -o kernel.elf
+        objcopy -O binary kernel.elf kernel.bin
+
+        gcc -m32 -ffreestanding -nostdlib -nostartfiles -c src/gui.c -o gui.o
+        ld -m elf_i386 -Ttext 0x9000 gui.o -o gui.elf
+        objcopy -O binary gui.elf gui.bin
+
+    - name: Create 1MB disk image
+      run: |
+        dd if=/dev/zero of=disk.img bs=1024 count=1024  # 1MB total
+        dd if=boot.bin of=disk.img bs=512 count=1 conv=notrunc
+        truncate -s 1M disk.img
+
+    - name: Check final size
+      run: |
+        ls -lh *.bin disk.img
+        du -h disk.img
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v4
+      with:
+        name: os-binaries-1mb
+        path: |
+          boot.bin
+          drivers.bin
+          kernel.bin
+          gui.bin
+          disk.img
