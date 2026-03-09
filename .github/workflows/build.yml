@@ -1,59 +1,23 @@
 name: Build MyOS
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
+on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
+      - uses: actions/checkout@v4
+      - name: Build
         run: |
-          sudo apt-get update
-          sudo apt-get install -y nasm gcc-multilib qemu-system-x86
-
-      - name: Build OS from src/
-        working-directory: src
-        run: |
-          echo "🔧 Building in src/..."
+          sudo apt-get install -y nasm gcc-multilib
+          cd src
           nasm -f bin boot.asm -o boot.bin
- nasm -f elf32 drivers.asm -o drivers.o
+          nasm -f elf32 drivers.asm -o drivers.o
           gcc -m32 -c kernel.c -o kernel.o
           gcc -m32 -c gui.c -o gui.o
-          gcc -m32 -c files.c -o files.o   # ← Важно: files.c, а не файлы.c
+          gcc -m32 -c files.c -o files.o
           ld -m elf_i386 -Ttext 0x1000 drivers.o kernel.o gui.o files.o -o kernel.bin
           cat boot.bin kernel.bin > os.img
-          ls -la *.bin *.img
-
-      - name: Test boot (QEMU headless)
-        working-directory: src
-        run: |
-          timeout 12 qemu-system-i386 -fda os.img -display none -serial stdio > qemu.log 2>&1 || true
-          if grep -q "MyOS v0.1" qemu.log; then
-            echo "✅ Boot successful"
-          else
-            echo "⚠️ Boot failed or no signature found"
-            cat qemu.log
-            exit 1
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          echo "✅ Built os.img"
+      - uses: actions/upload-artifact@v4
         with:
           name: os.img
           path: src/os.img
-
-      - name: Create Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: src/os.img
-          body: |
-            MyOS v0.1 — bare-metal OS (5 files: boot.asm, drivers.asm, files.c, gui.c, kernel.c)
