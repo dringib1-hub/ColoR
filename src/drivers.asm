@@ -1,55 +1,43 @@
-; drivers.asm — драйверы устройств (заглушка)
-; Загружается в сектор 4 (0x0C00)
+[BITS 32]
 
-[BITS 16]
-[ORG 0x0C00]
+extern keyboard_handler
+extern vga_put_char
+extern vga_clear
 
-drivers_start:
-    ; Сохраняем регистры
+; IRQ1 — клавиатура
+irq1:
     pusha
-    mov ax, cs
-    mov ds, ax
-    mov es, ax
+    in al, 0x60
+    push eax
+    call keyboard_handler
+    pop eax
+    mov al, 0x20
+    out 0x20, al
+    popa
+    iret
 
-    ; Сообщение: "Drivers loaded"
-    mov si, msg_loaded
-    call print_string
-
-    ; Инициализация клавиатуры (пример)
-    call init_keyboard
-
-    ; Возвращаем управление
+; VGA — текстовый режим (0x03), буфер 0xB8000
+vga_clear:
+    pusha
+    mov edi, 0xB8000
+    mov ecx, 80 * 25
+    mov eaxx0720   ; белый фон, чёрный текст, пробел
+    rep stosd
     popa
     ret
 
-; ——— Подпрограммы ———
-print_string:
+vga_put_char:
     pusha
-.next_char:
-    lodsb
-    or al, al
-    jz .done
-    mov ah, 0x0E
-    mov bh, 0
-    mov bl, 0x07
-    int 0x10
-    jmp .next_char
-.done:
+    mov edi, 0xB8000
+    mov eax, [esp+36]   ; char
+    mov ebx, [esp+40]   ; attr (по умолчанию 0x07)
+    mov ecx, [esp+44]   ; x
+    mov edx, [esp+48]   ; y
+    mov esi, 80
+    mul esi
+    add eax, ecx
+    shl eax, 1
+    add edi, eax
+    mov [edi], bx
     popa
     ret
-
-init_keyboard:
-    ; Просто сброс контроллера клавиатуры
-    in al, 0x64
-    test al, 2
-    jnz init_keyboard
-    mov al, 0xAE
-    out 0x64, al
-    ret
-
-; ——— Данные ———
-msg_loaded db 'Drivers loaded.', 0x0D, 0x0A, 0
-
-; ——— Заглушка ———
-times 510 - ($ - $$) db 0
-dw 0xAA55
