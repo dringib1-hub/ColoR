@@ -1,18 +1,20 @@
-// kernel.c — 12 строк, запускается по 0x8000
 void _start() {
-    // Вывод 'K' через BIOS (проверка передачи управления)
-    __asm__ volatile (
-        "mov $0x0E, %%ah\n\t"
-        "mov $'K', %%al\n\t"
-        "mov $0x00, %%bh\n\t"
-        "int $0x10"
-        :
-        :
-        : "ah", "al", "bh"
-    );
+    // Загрузка GUI
+    __asm__ volatile ("call 0x9000");  // gui.c
 
-    // Зацикливаемся — загрузчик считает, что ядро загружено
-    while (1) {
-        __asm__ volatile ("hlt");
-    }
+    // Загрузка CLR-файла (snake.clr)
+    __asm__ volatile (
+        "mov $0x02, %%ah\n\t"
+        "mov $8, %%al\n\t"
+        "mov $0, %%ch\n\t"
+        "mov $15, %%cl\n\t"
+        "mov $0, %%dh\n\t"
+        "mov $0x80, %%dl\n\t"
+        "mov $0x2000, %%bx\n\t"
+        "int $0x13\n\t"
+        "jmp 0x0000:0x2000"
+        :
+        :
+        : "ax", "bx", "cx", "dx"
+    );
 }
