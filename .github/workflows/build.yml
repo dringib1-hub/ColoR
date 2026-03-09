@@ -1,22 +1,19 @@
-name: Build MyOS
-on: [push]
+name: Build
+on: push
 jobs:
-  build:
+  b:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build
-        run: |
-          sudo apt-get install -y nasm gcc-multilib
-          cd src
-          nasm -f bin boot.asm -o boot.bin
-          nasm -f elf32 drivers.asm -o drivers.o
-          gcc -m32 -c kernel.c -o kernel.o
-          gcc -m32 -c gui.c -o gui.o
-          gcc -m32 -c files.c -o files.o
-          ld -m elf_i386 -Ttext 0x1000 drivers.o kernel.o gui.o files.o -o kernel.bin
-          cat boot.bin kernel.bin > os.img
-          echo "✅ Built os.img"
+      - run: sudo apt-get install -y nasm gcc-multilib
+      - run: |
+          nasm -f bin src/boot.asm -o src/boot.bin
+          nasm -f elf32 src/drivers.asm -o src/drivers.o
+          gcc -m32 -c src/kernel.c -o src/kernel.o
+          gcc -m32 -c src/gui.c -o src/gui.o
+          gcc -m32 -c src/files.c -o src/files.o
+          ld -m elf_i386 -Ttext 0x1000 src/drivers.o src/kernel.o src/gui.o src/files.o -o src/kernel.bin
+          cat src/boot.bin src/kernel.bin > src/os.img
       - uses: actions/upload-artifact@v4
         with:
           name: os.img
