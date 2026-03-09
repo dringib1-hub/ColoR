@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
 
 void memset(void* dst, uint8_t val, size_t n) {
     uint8_t* p = (uint8_t*)dst;
@@ -29,8 +30,4 @@ void itoa(int n, char* buf, int base) {
     for (int l = 0, r = i-1; l < r; l++, r--) {
         char t = buf[l]; buf[l] = buf[r]; buf[r] = t;
     }
-}
-
-void printf(const char* fmt, ...) {
-    // minimalist — just prints strings for now
 }
