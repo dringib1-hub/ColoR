@@ -1,5 +1,5 @@
 [BITS 32]
-global irq_handler
+global irq1_handler
 extern handle_key
 
 irq1_handler:
