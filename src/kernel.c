@@ -1,18 +1,20 @@
 #include <stdint.h>
 
 extern void vga_clear();
-extern void gui_draw_menu();
-extern void gui_handle_key(uint8_t scancode);
+extern void draw_menu();
+extern void handle_key(uint8_t sc);
+extern void irq_install(int irq, void (*handler)());
 
-// Прототипы из drivers.asm
-void keyboard_init();
-void irq_install_handler(int irq, void (*handler)());
+void keyboard_init() {
+    // stub — real impl in drivers.asm
+}
 
 void kernel_main() {
     vga_clear();
-    gui_draw_menu();
+    draw_menu();
 
-    keyboard_init(); // Устанавливает IRQ1 → handler
+    // Enable interrupts
+    __asm__ volatile ("sti");
 
     while (1) {
         __asm__ volatile ("hlt");
