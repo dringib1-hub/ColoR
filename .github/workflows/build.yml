@@ -27,8 +27,8 @@ jobs:
           nasm -f elf32 drivers.asm -o drivers.o
           gcc -m32 -c kernel.c -o kernel.o
           gcc -m32 -c gui.c -o gui.o
-          gcc -m32 -c файлы.c -o файлы.o
-          ld -m elf_i386 -Ttext 0x1000 drivers.o kernel.o gui.o файлы.o -o kernel.bin
+          gcc -m32 -c файлы.c -o files.o
+          ld -m elf_i386 -Ttext 0x1000 drivers.o kernel.o gui.o files.o -o kernel.bin
           cat boot.bin kernel.bin > os.img
           ls -la *.bin *.img
 
