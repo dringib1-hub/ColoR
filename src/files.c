@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <string.h>
 
-void memset(void* dst,_t val, size_t n) {
+void memset(void* dst, uint8_t val, size_t n) {
     volatile uint8_t* p = (uint8_t*)dst;
     while (n--) *p++ = val;
 }
