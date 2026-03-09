@@ -19,7 +19,7 @@ jobs:
           nasm -f elf32 src/drivers.asm -o src/drivers.o
           gcc -m32 -c src/kernel.c -o src/kernel.o
           gcc -m32 -c src/gui.c -o src/gui.o
-          gcc -m32 -c src/files.c -o src/files.o
+
           # Ключевое: -e kernel_main и --no-warn-mismatch
           ld -m elf_i386 -Ttext 0x1000 -e kernel_main \
              src/drivers.o src/kernel.o src/gui.o src/files.o \
