@@ -14,12 +14,12 @@ const char* menu[] = {
     "Shutdown"
 };
 
-int sel = 0;
+int selected = 0;
 
 void draw_menu() {
     vga_clear();
     for (int i = 0; i < MAX_ITEMS; i++) {
-        uint8_t attr = (i == sel) ? ATTR_SEL : ATTR_NORM;
+        uint8_t attr = (i == selected) ? ATTR_SEL : ATTR_NORM;
         vga_put_char('>', attr, 2, 5 + i);
         for (int j = 0; j < strlen(menu[i]); j++) {
             vga_put_char(menu[i][j], attr, 4 + j, 5 + i);
@@ -27,8 +27,14 @@ void draw_menu() {
     }
 }
 
-void handle_key(uint8_t sc) {
-    if (sc == 0x48) { sel = (sel - 1 + MAX_ITEMS) % MAX_ITEMS; draw_menu(); }
-    if (sc == 0x50) { sel = (sel + 1) % MAX_ITEMS; draw_menu(); }
-    if (sc == 0x1C) { /* Enter */ }
+void handle_key(uint8_t scancode) {
+    if (scancode == 0x48) { // ↑
+        selected = (selected - 1 + MAX_ITEMS) % MAX_ITEMS;
+        draw_menu();
+    } else if (scancode == 0x50) { // ↓
+        selected = (selected + 1) % MAX_ITEMS;
+        draw_menu();
+    } else if (scancode == 0x1C) { // Enter
+        // ничего не делаем — пока
+    }
 }
