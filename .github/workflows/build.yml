@@ -1,7 +1,9 @@
-name: Build MyOS (5 files)
+name: Build MyOS
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 jobs:
@@ -9,47 +11,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install tools
-      run: sudo apt update && sudo apt install -y nasm gcc qemu-system-x86
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm gcc-multilib qemu-system-x86
 
-    - name: Compile boot.asm
-      run: nasm -f bin src/boot.asm -o boot.bin
+      - name: Build OS from src/
+        working-directory: src
+        run: |
+          echo "⚙️ Building in src/..."
+          nasm -f bin boot.asm -o boot.bin
+          nasm -f elf32 drivers.asm -o drivers.o
+          gcc -m32 -c kernel.c -o kernel.o
+          gcc -m32 -c gui.c -o gui.o
+          gcc -m32 -c файлы.c -o файлы.o
+          ld -m elf_i386 -Ttext 0x1000 drivers.o kernel.o gui.o файлы.o -o kernel.bin
+          cat boot.bin kernel.bin > os.img
+          ls -la *.bin *.img
 
-    - name: Compile drivers.asm
-      run: nasm -f bin src/drivers.asm -o drivers.bin
+      - name: Test boot (QEMU headless)
+        working-directory: src
+        run: |
+          timeout 12 qemu-system-i386 -fda os.img -display none -serial stdio > qemu.log 2>&1 || true
+          if grep -q "MyOS v0.1" qemu.log; then
+            echo "✅ Boot successful"
+          else
+            echo "⚠️ Boot failed or no signature found"
+            cat qemu.log
+            exit 1
+          fi
 
-    - name: Compile files.c
-      run: |
-        gcc -m32 -ffreestanding -nostdlib -c src/files.c -o files.o
-        ld -m elf_i386 -Ttext 0xA000 files.o -o files.elf
-        objcopy -O binary files.elf files.bin
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: os.img
+          path: src/os.img
 
-    - name: Compile gui.c
-      run: |
-        gcc -m32 -ffreestanding -nostdlib -c src/gui.c -o gui.o
-        ld -m elf_i386 -Ttext 0x9000 gui.o -o gui.elf
-        objcopy -O binary gui.elf gui.bin
-
-    - name: Compile kernel.c
-      run: |
-        gcc -m32 -ffreestanding -nostdlib -c src/kernel.c -o kernel.o
-        ld -m elf_i386 -Ttext 0x8000 kernel.o -o kernel.elf
-        objcopy -O binary kernel.elf kernel.bin
-
-    - name: Create 1MB disk
-      run: |
-        dd if=/dev/zero of=disk.img bs=1024 count=1024
-        dd if=boot.bin of=disk.img bs=512 count=1 conv=notrunc
-        dd if=kernel.bin of=disk.img bs=512 seek=1 conv=notrunc
-        dd if=gui.bin of=disk.img bs=512 seek=2 conv=notrunc
-        dd if=drivers.bin of=disk.img bs=512 seek=3 conv=notrunc
-        dd if=files.bin of=disk.img bs=512 seek=4 conv=notrunc
-        truncate -s 1M disk.img
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: os-5files
-        path: disk.img
+      - name: Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src/os.img
+          body: |
+            MyOS v0.1 — bare-metal OS built on ${{ github.sha }}
+            Files: boot.asm, drivers.asm, файлы.c, gui.c, kernel.c
