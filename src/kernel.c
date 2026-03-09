@@ -1,41 +1,20 @@
 #include <stdint.h>
 
-// Внешние функции
-extern void draw_menu();       // из gui.c
-extern void vga_clear();       // из gui.c или drivers.asm
-extern void irq1_handler();    // из drivers.asm
-extern void handle_key(uint8_t scancode); // из gui.c
+extern void vga_clear();
+extern void handle_key(uint8_t);
+extern void irq1_handler();
 
-// Функция ввода/вывода
-static inline uint8_t inportb(uint16_t port) {
-    uint8_t rv;
-    __asm__ volatile ("inb %1, %0" : "=a" (rv) : "dN" (port));
-    return rv;
+static inline uint8_t inb(uint16_t p) {
+    uint8_t v; __asm__ volatile ("inb %1,%0":"=a"(v):"Nd"(p)); return v;
 }
-
-static inline void outportb(uint16_t port, uint8_t data) {
-    __asm__ volatile ("outb %1, %0" : : "dN" (port), "a" (data));
-}
-
-// Установка вектора прерывания (упрощённо)
-void setup_idt_entry(int index, uint32_t offset) {
-    // В реальности нужно заполнять IDT, но для CI — просто пусть будет
-    // IRQ1 → irq1_handler (см. в drivers.asm)
+static inline void outb(uint16_t p, uint8_t v) {
+    __asm__ volatile ("outb %1,%0"::"Nd"(p),"a"(v));
 }
 
 void kernel_main() {
-    // Инициализация
-    vga_clear();              // очистить экран
-    draw_menu();              // нарисовать меню
+    vga_clear();
+    handle_key(0); // вызовем один раз для инициализации меню
 
-    // Установить обработчик IRQ1 (упрощённо)
-    setup_idt_entry(33, (uint32_t)irq1_handler); // IRQ1 → INT 33
-
-    // Разрешить прерывания
     __asm__ volatile ("sti");
-
-    // Главный цикл
-    while (1) {
-        __asm__ volatile ("hlt");  // ждать прерывания
-    }
+    while(1) __asm__ volatile ("hlt");
 }
