@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>  // ← добавь эту строку
 
 void memset(void* dst, uint8_t val, size_t n) {
     uint8_t* p = (uint8_t*)dst;
