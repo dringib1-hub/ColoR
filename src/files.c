@@ -1,4 +1,3 @@
-// files.c — общие утилиты (латиница!)
 #include <stdint.h>
 
 void memset(void* dst, uint8_t val, size_t n) {
@@ -14,7 +13,7 @@ void memcpy(void* dst, const void* src, size_t n) {
 
 int strlen(const char* s) {
     int len = 0;
-    while (*s++) len++;
+    while (s[len]) len++;
     return len;
 }
 
@@ -27,8 +26,11 @@ void itoa(int n, char* buf, int base) {
         n /= base;
     } while (n);
     buf[i] = 0;
-    // reverse
     for (int l = 0, r = i-1; l < r; l++, r--) {
         char t = buf[l]; buf[l] = buf[r]; buf[r] = t;
     }
+}
+
+void printf(const char* fmt, ...) {
+    // minimalist — just prints strings for now
 }
