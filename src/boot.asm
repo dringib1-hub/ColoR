@@ -1,58 +1,39 @@
 [BITS 16]
 [ORG 0x7C00]
 
-start:
     cli
     xor ax, ax
     mov ds, ax
     mov es, ax
-    mov ss, ax
-    mov sp, 0x7C00
+    sti
 
-    ; Установка текстового режима 80x25
-    mov ah, 0x00
-    mov al, 0x03
-    int 0x10
-
-    ; Вывод сообщения
+    ; Вывод приветствия
     mov si, msg
-    call print_string
+    call print_str
 
-    ; Загрузка ядра с сектора 2 в 0x8000
+    ; Загрузка ядра (сектор 2, 10 секторов)
     mov ah, 0x02
-    mov al, 1
+    mov al, 10
     mov ch, 0
     mov cl, 2
     mov dh, 0
     mov dl, 0x80
-    mov bx, 0x8000
+    mov bx, 0x1000
     int 0x13
-    jc boot_error
-    jmp 0x0000:0x8000
 
-boot_error:
-    mov si, msg_err
-    call print_string
-    hlt
-    jmp $
+    jmp 0x1000:0x0
 
-print_string:
-    pusha
-.next:
+print_str:
     lodsb
-    or al, al
+    test al, al
     jz .done
     mov ah, 0x0E
-    mov bh, 0
-    mov bl, 0x07
     int 0x10
-    jmp .next
+    jmp print_str
 .done:
-    popa
     ret
 
-msg db 'MyOS Booting...',0x0D,0x0A,0
-msg_err db 'Boot failed!',0x0D,0x0A,0
+msg db 'MyOS v0.1', 0 0xA, 0
 
-times 510 - ($ - $$) db 0
+times 510 - ($ - db 0
 dw 0xAA55
