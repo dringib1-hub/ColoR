@@ -1,8 +1,8 @@
 [BITS 32]
 
 extern keyboard_handler
-extern vga_put_char
 extern vga_clear
+extern vga_put_char
 
 ; IRQ1 — клавиатура
 irq1:
@@ -16,28 +16,29 @@ irq1:
     popa
     iret
 
-; VGA — текстовый режим (0x03), буфер 0xB8000
+; VGA text mode (0xB8000)
 vga_clear:
     pusha
     mov edi, 0xB8000
     mov ecx, 80 * 25
-    mov eaxx0720   ; белый фон, чёрный текст, пробел
+    mov eax, 0x0720   ; attr=07, char=20 (space)
     rep stosd
     popa
     ret
 
 vga_put_char:
     pusha
-    mov edi, 0xB8000
+    mov ebx, 0xB8000
     mov eax, [esp+36]   ; char
-    mov ebx, [esp+40]   ; attr (по умолчанию 0x07)
+    mov edx, [esp+40]   ; attr
     mov ecx, [esp+44]   ; x
-    mov edx, [esp+48]   ; y
-    mov esi, 80
-    mul esi
+    mov esi, [esp+48]   ; y
+    mov edi, esi
+    mov eax, 80
+    mul edi
     add eax, ecx
     shl eax, 1
-    add edi, eax
-    mov [edi], bx
+    add ebx, eax
+    mov [ebx], dx
     popa
     ret
