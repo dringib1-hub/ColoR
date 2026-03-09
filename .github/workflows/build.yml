@@ -22,12 +22,12 @@ jobs:
       - name: Build OS from src/
         working-directory: src
         run: |
-          echo "⚙️ Building in src/..."
+          echo "🔧 Building in src/..."
           nasm -f bin boot.asm -o boot.bin
-          nasm -f elf32 drivers.asm -o drivers.o
+ nasm -f elf32 drivers.asm -o drivers.o
           gcc -m32 -c kernel.c -o kernel.o
           gcc -m32 -c gui.c -o gui.o
-          gcc -m32 -c файлы.c -o files.o
+          gcc -m32 -c files.c -o files.o   # ← Важно: files.c, а не файлы.c
           ld -m elf_i386 -Ttext 0x1000 drivers.o kernel.o gui.o files.o -o kernel.bin
           cat boot.bin kernel.bin > os.img
           ls -la *.bin *.img
@@ -56,5 +56,4 @@ jobs:
         with:
           files: src/os.img
           body: |
-            MyOS v0.1 — bare-metal OS built on ${{ github.sha }}
-            Files: boot.asm, drivers.asm, файлы.c, gui.c, kernel.c
+            MyOS v0.1 — bare-metal OS (5 files: boot.asm, drivers.asm, files.c, gui.c, kernel.c)
