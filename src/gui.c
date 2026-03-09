@@ -1,9 +1,10 @@
 #include <stdint.h>
-#include <string.h>
+#include <string.h>  // да, теперь нормально — strlen из libc
 
 extern void vga_clear();
 extern void vga_put_char(char c, uint8_t attr, int x, int y);
 
+// ... остальное без изменений
 void handle_key(uint8_t sc);
 void draw_menu();
 
