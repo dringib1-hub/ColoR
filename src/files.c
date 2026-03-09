@@ -1,4 +1,4 @@
-// Общие утилиты
+// files.c — общие утилиты (латиница!)
 #include <stdint.h>
 
 void memset(void* dst, uint8_t val, size_t n) {
