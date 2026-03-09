@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 
 extern void vga_clear();
 extern void vga_put_char(char c, uint8_t attr, int x, int y);
