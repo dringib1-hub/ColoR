@@ -1,33 +1,41 @@
 #include <stdint.h>
 
-// Внешние
-extern void vga_clear();
-extern void draw_menu();
-extern void irq1_handler();
+// Внешние функции
+extern void draw_menu();       // из gui.c
+extern void vga_clear();       // из gui.c или drivers.asm
+extern void irq1_handler();    // из drivers.asm
+extern void handle_key(uint8_t scancode); // из gui.c
 
-// Порты
-static inline uint8_t inb(uint16_t p) {
-    uint8_t v;
-    __asm__ volatile ("inb %1,%0" : "=a"(v) : "Nd"(p));
-    return v;
-}
-static inline void outb(uint16_t p, uint8_t v) {
-    __asm__ volatile ("outb %1,%0" :: "Nd"(p), "a"(v));
+// Функция ввода/вывода
+static inline uint8_t inportb(uint16_t port) {
+    uint8_t rv;
+    __asm__ volatile ("inb %1, %0" : "=a" (rv) : "dN" (port));
+    return rv;
 }
 
-// Установка обработчика — просто переопределяем вектор (для теста)
-void install_irq1() {
-    // В реальности — через IDT, но для CI: пусть PIC сам вызовет irq1_handler
+static inline void outportb(uint16_t port, uint8_t data) {
+    __asm__ volatile ("outb %1, %0" : : "dN" (port), "a" (data));
+}
+
+// Установка вектора прерывания (упрощённо)
+void setup_idt_entry(int index, uint32_t offset) {
+    // В реальности нужно заполнять IDT, но для CI — просто пусть будет
+    // IRQ1 → irq1_handler (см. в drivers.asm)
 }
 
 void kernel_main() {
-    vga_clear();
-    draw_menu();
+    // Инициализация
+    vga_clear();              // очистить экран
+    draw_menu();              // нарисовать меню
 
-    // Включаем прерывания
+    // Установить обработчик IRQ1 (упрощённо)
+    setup_idt_entry(33, (uint32_t)irq1_handler); // IRQ1 → INT 33
+
+    // Разрешить прерывания
     __asm__ volatile ("sti");
 
+    // Главный цикл
     while (1) {
-        __asm__ volatile ("hlt");
+        __asm__ volatile ("hlt");  // ждать прерывания
     }
 }
