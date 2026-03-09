@@ -1,14 +1,56 @@
-- name: Compile kernel.c
-  run: |
-    gcc -m32 -ffreestanding -nostdlib -c src/kernel.c -o kernel.o
-    ld -m elf_i386 -Ttext 0x8000 kernel.o -o kernel.elf
-    objcopy -O binary kernel.elf kernel.bin
+name: Build MyOS
 
-- name: Compile gui.c
-  run: |
-    gcc -m32 -ffreestanding -nostdlib -c src/gui.c -o gui.o
-    ld -m elf_i386 -Ttext 0x9000 gui.o -o gui.elf
-    objcopy -O binary gui.elf gui.bin
+on:
+  push:
+    branches: [ main ]
 
-- name: Add snake.clr
-  run: dd if=snake.clr of=disk.img bs=512 seek=14 conv=notrunc
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install tools
+      run: sudo apt update && sudo apt install -y nasm gcc qemu-system-x86
+
+    - name: Ensure src exists
+      run: mkdir -p src
+
+    - name: Compile boot.asm
+      run: nasm -f bin src/boot.asm -o boot.bin
+
+    - name: Compile drivers.asm
+      run: nasm -f bin src/drivers.asm -o drivers.bin
+
+    - name: Compile kernel.c
+      run: |
+        gcc -m32 -ffreestanding -nostdlib -c src/kernel.c -o kernel.o
+        ld -m elf_i386 -Ttext 0x8000 kernel.o -o kernel.elf
+        objcopy -O binary kernel.elf kernel.bin
+
+    - name: Compile gui.c
+      run: |
+        gcc -m32 -ffreestanding -nostdlib -c src/gui.c -o gui.o
+        ld -m elf_i386 -Ttext 0x9000 gui.o -o gui.elf
+        objcopy -O binary gui.elf gui.bin
+
+    - name: Create 1MB disk image
+      run: |
+        dd if=/dev/zero of=disk.img bs=1024 count=1024
+        dd if=boot.bin of=disk.img bs=512 count=1 conv=notrunc
+        dd if=kernel.bin of=disk.img bs=512 seek=1 conv=notrunc
+        dd if=gui.bin of=disk.img bs=512 seek=2 conv=notrunc
+        dd if=drivers.bin of=disk.img bs=512 seek=3 conv=notrunc
+        truncate -s 1M disk.img
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: os-binaries
+        path: |
+          boot.bin
+          drivers.bin
+          kernel.bin
+          gui.bin
+          disk.img
